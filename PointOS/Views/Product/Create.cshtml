@@ -1,0 +1,338 @@
+﻿@model PointOS.ViewModels.ProductViewModel
+@{
+    ViewData["Title"] = Model.Id > 0 ? "Edit Product" : "Create Product";
+}
+
+<div class="container-fluid p-0">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item"><a href="#">eCommerce</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Product")">Products</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@(Model.Id > 0 ? "Edit" : "Create")</li>
+        </ol>
+    </nav>
+
+    <!-- Error Message Display -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form asp-action="@(Model.Id > 0 ? "Edit" : "Create")" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ExistingImage" />
+
+        <div class="row">
+            <!-- Left Column - Main Information -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                            <input asp-for="Name" class="form-control" placeholder="Enter product name" required />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                            <div class="invalid-feedback">Please enter a product name.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Enter product description"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="SKU" class="form-label">SKU <span class="text-danger">*</span></label>
+                                <input asp-for="SKU" class="form-control" placeholder="Enter SKU" required />
+                                <span asp-validation-for="SKU" class="text-danger"></span>
+                                <div class="invalid-feedback">Please enter a SKU.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="CategoryId" class="form-label">Category</label>
+                                <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "Id", "Name"))">
+                                    <option value="">-- Select Category --</option>
+                                </select>
+                                <span asp-validation-for="CategoryId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Price" class="form-label">Price <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required />
+                                </div>
+                                <span asp-validation-for="Price" class="text-danger"></span>
+                                <div class="invalid-feedback">Please enter a valid price.</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                                <input asp-for="Quantity" type="number" min="0" class="form-control" placeholder="0" required />
+                                <span asp-validation-for="Quantity" class="text-danger"></span>
+                                <div class="invalid-feedback">Please enter a valid quantity.</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select asp-for="Status" class="form-select" required>
+                                    <option value="">-- Select Status --</option>
+                                    <option value="Published" selected>Published</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                                <div class="invalid-feedback">Please select a status.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Additional Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Rating" class="form-label">Rating</label>
+                                <div class="rating-input d-flex align-items-center">
+                                    <input type="hidden" asp-for="Rating" id="ratingValue" />
+                                    <div class="stars d-flex me-2">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fas fa-star star-rating me-1 @(i <= Model.Rating ? "text-warning" : "text-muted")"
+                                               data-value="@i" style="cursor: pointer;"></i>
+                                        }
+                                    </div>
+                                    <span id="ratingText" class="small">@(Model.Rating > 0 ? $"{Model.Rating} stars" : "Not rated")</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Stock Status</label>
+                                <input type="text" class="form-control" value="@GetStockStatus(Model.Quantity)" readonly />
+                                <small class="text-muted">This is automatically calculated based on quantity.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Image & Actions -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Product Image</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            @if (!string.IsNullOrEmpty(Model.ExistingImage))
+                            {
+                                <img src="@Model.ExistingImage" alt="@Model.Name" id="imagePreview"
+                                     class="img-fluid rounded border" style="max-height: 200px;" />
+                            }
+                            else
+                            {
+                                <img src="/media/products/default.png" alt="Product Image" id="imagePreview"
+                                     class="img-fluid rounded border" style="max-height: 200px;" />
+                            }
+                        </div>
+                        <div class="mb-3">
+                            <label for="ImageFile" class="form-label">Upload Image</label>
+                            <input type="file" class="form-control image-upload-input" id="ImageFile" name="ImageFile"
+                                   accept="image/*" data-preview="#imagePreview" />
+                            <div class="form-text">
+                                Recommended size: 800x800 pixels, max 2MB.
+                                @if (!string.IsNullOrEmpty(Model.ExistingImage))
+                                {
+                                    <div class="mt-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="removeImage" name="RemoveImage" value="true" />
+                                            <label class="form-check-label" for="removeImage">
+                                                Remove existing image
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> @(Model.Id > 0 ? "Update Product" : "Create Product")
+                            </button>
+                            <a href="@Url.Action("Index", "Product")" class="btn btn-light">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            @if (Model.Id > 0)
+                            {
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
+                                    <i class="fas fa-trash me-2"></i> Delete
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (Model.Id > 0)
+{
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the product <strong>@Model.Name</strong>?</p>
+                    <p class="text-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i> This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <a href="@Url.Action("Delete", "Product", new { id = Model.Id })" class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@functions {
+    public string GetStockStatus(int quantity)
+    {
+        return quantity switch
+        {
+            0 => "Out of stock",
+            <= 10 => "Low stock",
+            _ => "In stock"
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize star rating
+            const stars = document.querySelectorAll('.star-rating');
+            const ratingValue = document.getElementById('ratingValue');
+            const ratingText = document.getElementById('ratingText');
+
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const value = parseInt(this.dataset.value);
+                    ratingValue.value = value;
+
+                    // Update stars display
+                    stars.forEach((s, index) => {
+                        if (index < value) {
+                            s.classList.add('text-warning');
+                            s.classList.remove('text-muted');
+                        } else {
+                            s.classList.remove('text-warning');
+                            s.classList.add('text-muted');
+                        }
+                    });
+
+                    // Update text
+                    ratingText.textContent = value + ' stars';
+                });
+
+                // Hover effect
+                star.addEventListener('mouseenter', function() {
+                    const value = parseInt(this.dataset.value);
+                    const currentRating = parseInt(ratingValue.value) || 0;
+
+                    stars.forEach((s, index) => {
+                        if (index < value) {
+                            s.classList.add('text-warning');
+                            s.classList.remove('text-muted');
+                        } else {
+                            s.classList.remove('text-warning');
+                            s.classList.add('text-muted');
+                        }
+                    });
+                });
+
+                star.addEventListener('mouseleave', function() {
+                    const currentRating = parseInt(ratingValue.value) || 0;
+
+                    stars.forEach((s, index) => {
+                        if (index < currentRating) {
+                            s.classList.add('text-warning');
+                            s.classList.remove('text-muted');
+                        } else {
+                            s.classList.remove('text-warning');
+                            s.classList.add('text-muted');
+                        }
+                    });
+                });
+            });
+
+            // Image preview
+            const imageUpload = document.getElementById('ImageFile');
+            const imagePreview = document.getElementById('imagePreview');
+            const removeImage = document.getElementById('removeImage');
+
+            if (imageUpload && imagePreview) {
+                imageUpload.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+
+                        reader.onload = function(e) {
+                            imagePreview.src = e.target.result;
+                        }
+
+                        reader.readAsDataURL(this.files[0]);
+
+                        // Uncheck remove image if checked
+                        if (removeImage) {
+                            removeImage.checked = false;
+                        }
+                    }
+                });
+
+                // Handle remove image checkbox
+                if (removeImage) {
+                    removeImage.addEventListener('change', function() {
+                        if (this.checked) {
+                            imagePreview.src = '/media/products/default.png';
+                            imageUpload.value = '';
+                        }
+                    });
+                }
+            }
+
+            // Form validation
+            const form = document.querySelector('.needs-validation');
+
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+
+                    form.classList.add('was-validated');
+                });
+            }
+        });
+    </script>
+}

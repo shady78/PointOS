@@ -1,0 +1,312 @@
+﻿@model PointOS.ViewModels.CategoryViewModel
+@{
+    ViewData["Title"] = Model.Id > 0 ? "Edit Category" : "Create Category";
+}
+
+<div class="container-fluid p-0">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item"><a href="#">eCommerce</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Category")">Categories</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@(Model.Id > 0 ? "Edit" : "Create")</li>
+        </ol>
+    </nav>
+
+    <!-- Error Message Display -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@(Model.Id > 0 ? "Edit Category" : "Create Category")</h5>
+                    <a href="@Url.Action("Index", "Category")" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form asp-action="@(Model.Id > 0 ? "Edit" : "Create")" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="ExistingImage" />
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Basic Information -->
+                                <div class="mb-4">
+                                    <h6 class="text-uppercase text-muted fs-sm mb-3">Basic Information</h6>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Name" class="form-label">Category Name <span class="text-danger">*</span></label>
+                                        <input asp-for="Name" class="form-control" placeholder="Enter category name" required />
+                                        <span asp-validation-for="Name" class="text-danger"></span>
+                                        <div class="invalid-feedback">Please enter a category name.</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Description" class="form-label">Description</label>
+                                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Enter category description"></textarea>
+                                        <span asp-validation-for="Description" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Type" class="form-label">Category Type <span class="text-danger">*</span></label>
+                                        <div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="Type" id="typeAutomated" value="Automated"
+                                                @(Model.Type == "Automated" || string.IsNullOrEmpty(Model.Type) ? "checked" : "") required />
+                                                <label class="form-check-label" for="typeAutomated">
+                                                    Automated
+                                                    <div class="form-text">Products will be automatically assigned based on rules</div>
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="Type" id="typeManual" value="Manual"
+                                                @(Model.Type == "Manual" ? "checked" : "") required />
+                                                <label class="form-check-label" for="typeManual">
+                                                    Manual
+                                                    <div class="form-text">Products will be manually assigned to this category</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <span asp-validation-for="Type" class="text-danger"></span>
+                                        <div class="invalid-feedback">Please select a category type.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Related Products Section - Visible only in Edit mode -->
+                                @if (Model.Id > 0)
+                                {
+                                    <div class="mb-4">
+                                        <h6 class="text-uppercase text-muted fs-sm mb-3">Related Products</h6>
+
+                                        @if (Model.Products != null && Model.Products.Any())
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Name</th>
+                                                            <th>SKU</th>
+                                                            <th class="text-end">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var product in Model.Products.Take(5))
+                                                        {
+                                                            <tr>
+                                                                <td>@product.Name</td>
+                                                                <td>@product.SKU</td>
+                                                                <td class="text-end">
+                                                                    <a href="@Url.Action("Edit", "Product", new { id = product.Id })" class="btn btn-sm btn-light">
+                                                                        <i class="fas fa-external-link-alt"></i>
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            @if (Model.Products.Count() > 5)
+                                            {
+                                                <div class="text-center mt-2">
+                                                    <a href="@Url.Action("Index", "Product", new { categoryId = Model.Id })" class="text-decoration-none">
+                                                        View all @Model.Products.Count() products in this category
+                                                    </a>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="text-center py-3 bg-light rounded">
+                                                <i class="fas fa-box fa-2x text-muted mb-2"></i>
+                                                <p class="mb-1">No products in this category</p>
+                                                <a href="@Url.Action("Create", "Product", new { categoryId = Model.Id })" class="btn btn-sm btn-primary mt-2">
+                                                    <i class="fas fa-plus me-1"></i> Add Product
+                                                </a>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="col-md-4">
+                                <!-- Category Image -->
+                                <div class="mb-4">
+                                    <h6 class="text-uppercase text-muted fs-sm mb-3">Category Image</h6>
+
+                                    <div class="text-center mb-3">
+                                        @if (!string.IsNullOrEmpty(Model.ExistingImage))
+                                        {
+                                            <img src="@Model.ExistingImage" alt="@Model.Name" id="imagePreview"
+                                                 class="img-fluid rounded border" style="max-height: 150px;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="rounded bg-light d-flex align-items-center justify-content-center mx-auto"
+                                                 style="width: 150px; height: 150px;" id="placeholderImage">
+                                                <span class="fw-bold fs-1 text-secondary">
+                                                    @(string.IsNullOrEmpty(Model.Name) ? "C" : Model.Name.Substring(0, 1).ToUpper())
+                                                </span>
+                                            </div>
+                                            <img src="" alt="" id="imagePreview" class="img-fluid rounded border d-none" style="max-height: 150px;" />
+                                        }
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ImageFile" class="form-label">Upload Image</label>
+                                        <input type="file" class="form-control image-upload-input" id="ImageFile" name="ImageFile"
+                                               accept="image/*" data-preview="#imagePreview" />
+                                        <div class="form-text">
+                                            Recommended size: 400x400 pixels, max 1MB.
+                                            @if (!string.IsNullOrEmpty(Model.ExistingImage))
+                                            {
+                                                <div class="mt-2">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="removeImage" name="RemoveImage" value="true" />
+                                                        <label class="form-check-label" for="removeImage">
+                                                            Remove existing image
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between pt-3 border-top mt-4">
+                            <a href="@Url.Action("Index", "Category")" class="btn btn-light">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <div>
+                                @if (Model.Id > 0)
+                                {
+                                    <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
+                                        <i class="fas fa-trash me-1"></i> Delete
+                                    </button>
+                                }
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i> @(Model.Id > 0 ? "Update" : "Create")
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Id > 0)
+{
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the category <strong>@Model.Name</strong>?</p>
+                    <p class="text-warning mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Products in this category will be unassigned.</p>
+                    <p class="text-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i> This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <a href="@Url.Action("Delete", "Category", new { id = Model.Id })" class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Image preview
+            const imageUpload = document.getElementById('ImageFile');
+            const imagePreview = document.getElementById('imagePreview');
+            const placeholderImage = document.getElementById('placeholderImage');
+            const removeImage = document.getElementById('removeImage');
+
+            if (imageUpload && imagePreview) {
+                imageUpload.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+
+                        reader.onload = function(e) {
+                            imagePreview.src = e.target.result;
+                            imagePreview.classList.remove('d-none');
+
+                            if (placeholderImage) {
+                                placeholderImage.classList.add('d-none');
+                            }
+                        }
+
+                        reader.readAsDataURL(this.files[0]);
+
+                        // Uncheck remove image if checked
+                        if (removeImage) {
+                            removeImage.checked = false;
+                        }
+                    }
+                });
+
+                // Handle remove image checkbox
+                if (removeImage) {
+                    removeImage.addEventListener('change', function() {
+                        if (this.checked) {
+                            imagePreview.src = '';
+                            imagePreview.classList.add('d-none');
+                            imageUpload.value = '';
+
+                            if (placeholderImage) {
+                                placeholderImage.classList.remove('d-none');
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Form validation
+            const form = document.querySelector('.needs-validation');
+
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+
+                    form.classList.add('was-validated');
+                });
+            }
+
+            // Update placeholder letter when category name changes
+            const nameInput = document.getElementById('Name');
+            const placeholderLetter = placeholderImage ? placeholderImage.querySelector('span') : null;
+
+            if (nameInput && placeholderLetter) {
+                nameInput.addEventListener('input', function() {
+                    if (this.value.length > 0) {
+                        placeholderLetter.textContent = this.value.charAt(0).toUpperCase();
+                    } else {
+                        placeholderLetter.textContent = 'C';
+                    }
+                });
+            }
+        });
+    </script>
+}

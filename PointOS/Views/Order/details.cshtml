@@ -1,0 +1,725 @@
+﻿@model PointOS.ViewModels.OrderViewModel
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<!-- Custom Styles for this page -->
+<style>
+    /* Avatar styles */
+    .avatar-circle {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 0;
+    }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1.1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #e9ecef;
+        }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+    .timeline-indicator {
+        position: absolute;
+        left: -3rem;
+        top: 0;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        z-index: 1;
+    }
+
+    /* Card hover effect */
+    .card {
+        transition: all 0.2s ease;
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+    /* Badge styles */
+    .badge {
+        padding: 0.5em 0.75em;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    /* Address display */
+    .address-details {
+        white-space: pre-line;
+        line-height: 1.6;
+    }
+
+    /* Print styles */
+    
+    .container-fluid {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+
+    .tab-pane {
+        display: block !important;
+        opacity: 1 !important;
+    }
+
+    .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+        .table td, .table th {
+            padding: 0.5rem !important;
+        }
+
+    }
+</style>
+
+<div class="container-fluid p-0">
+    <!-- Header with breadcrumb and actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+        <div>
+            <h4 class="mb-1 fw-bold">Order Details</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Order")">Orders</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Order Details</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <button type="button" class="btn btn-light me-2" onclick="window.history.back()">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </button>
+            <a href="@Url.Action("Create", "Order")" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> New Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Order Status Banner -->
+    <div class="alert @GetStatusAlertClass(Model.Status) d-flex align-items-center mb-4" role="alert">
+        <i class="@GetStatusIcon(Model.Status) me-2"></i>
+        <div>
+            <strong>Status: @Model.Status</strong> -
+            @GetStatusMessage(Model.Status)
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab" aria-controls="summary" aria-selected="true">
+                <i class="fas fa-file-alt me-1"></i> Order Summary
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">
+                <i class="fas fa-history me-1"></i> Order History
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false">
+                <i class="fas fa-sticky-note me-1"></i> Notes
+            </button>
+        </li>
+    </ul>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-end mb-4 action-buttons">
+        <div class="dropdown me-2">
+            <button class="btn btn-light dropdown-toggle" type="button" id="orderActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-ellipsis-v me-1"></i> Actions
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="orderActionsDropdown">
+                <li><a class="dropdown-item" href="@Url.Action("Edit", "Order", new { id = Model.Id })"><i class="fas fa-edit me-2"></i> Edit Order</a></li>
+                <li><a class="dropdown-item" href="#" onclick="window.print(); return false;"><i class="fas fa-print me-2"></i> Print Order</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("DownloadInvoice", "Order", new { id = Model.Id })"><i class="fas fa-file-pdf me-2"></i> Download Invoice</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#cancelOrderModal"><i class="fas fa-ban me-2"></i> Cancel Order</a></li>
+            </ul>
+        </div>
+        <a href="@Url.Action("Create", "Order")" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> New Order
+        </a>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="orderTabContent">
+        <!-- Order Summary Tab -->
+        <div class="tab-pane fade show active" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+            <div class="row">
+                <!-- Order Overview Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Order #@Model.OrderNumber</h5>
+                            <span class="badge @GetStatusBadgeClass(Model.Status)">@Model.Status</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Date Added:</label>
+                                    <div class="fw-medium">@Model.DateAdded.ToString("dd/MM/yyyy HH:mm")</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Last Updated:</label>
+                                    <div class="fw-medium">@(Model.DateModified?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Payment Method:</label>
+                                    <div class="fw-medium d-flex align-items-center">
+                                        @Model.PaymentMethod
+                                        @if (Model.PaymentMethod == "Online")
+                                        {
+                                            <img src="/images/visa.png" alt="Visa" height="20" class="ms-2">
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Shipping Method:</label>
+                                    <div class="fw-medium">@Model.ShippingMethod</div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Invoice:</label>
+                                    <div class="fw-medium">
+                                        <a href="@Url.Action("DownloadInvoice", "Order", new { id = Model.Id })" class="text-decoration-none">
+                                            @Model.InvoiceNumber <i class="fas fa-download ms-1 small"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted mb-1">Tracking:</label>
+                                    <div class="fw-medium">
+                                        <a href="#" class="text-decoration-none">
+                                            @Model.ShippingTrackingNumber <i class="fas fa-external-link-alt ms-1 small"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Details Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0">Customer Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                @if (!string.IsNullOrEmpty(Model.CustomerImageUrl))
+                                {
+                                    <img src="@Model.CustomerImageUrl" alt="@Model.CustomerName" class="rounded-circle me-3" width="48" height="48">
+                                }
+                                else
+                                {
+                                    <div class="avatar-circle me-3" style="width: 48px; height: 48px; background-color: @Model.CustomerInitialsBackgroundColor">
+                                        <span class="avatar-text">@Model.CustomerInitials</span>
+                                    </div>
+                                }
+                                <div>
+                                    <h6 class="mb-0 fw-bold">@Model.CustomerName</h6>
+                                    <a href="mailto:@Model.CustomerEmail" class="text-decoration-none">@Model.CustomerEmail</a>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted mb-1">Phone:</label>
+                                    <div class="fw-medium">
+                                        <a href="tel:@Model.CustomerPhone" class="text-decoration-none">@Model.CustomerPhone</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted mb-1">Reward Points:</label>
+                                    <div class="fw-medium">@(Model.RewardPoints?.ToString() ?? "0")</div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-user me-1"></i> View Customer Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Billing Address Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i> Billing Address</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="address-details">
+                                @Model.FullBillingAddress
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-map-marker-alt me-1"></i> View on Map
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Address Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="fas fa-shipping-fast me-2"></i> Shipping Address</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="address-details">
+                                @Model.FullShippingAddress
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-map-marker-alt me-1"></i> View on Map
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Order Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="@(string.IsNullOrEmpty(item.ProductImageUrl) ? "/media/products/default.png" : item.ProductImageUrl)"
+                                                     alt="@item.ProductName" width="50" height="50" class="rounded border me-3">
+                                                <div>
+                                                    <div class="fw-medium">@item.ProductName</div>
+                                                    <div class="text-muted small">Delivery Date: @item.DeliveryDate.ToString("dd/MM/yyyy")</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@item.SKU</td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-end">$@item.UnitPrice.ToString("F2")</td>
+                                        <td class="text-end">$@item.Subtotal.ToString("F2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <!-- Maybe add some additional info or actions here -->
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span>$@Model.Total.ToString("F2")</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">VAT (@Model.VAT%):</span>
+                                        <span>$@((Model.Total * Model.VAT / 100).ToString("F2"))</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Shipping:</span>
+                                        <span>$@Model.ShippingRate.ToString("F2")</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between fw-bold">
+                                        <span>Grand Total:</span>
+                                        <span class="fs-5">$@Model.GrandTotal.ToString("F2")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i> Order Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-indicator bg-success">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="fw-medium">Order Placed</span>
+                                    <span class="text-muted">@Model.DateAdded.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <p class="text-muted mb-0">Order #@Model.OrderNumber was created.</p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-indicator bg-primary">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="fw-medium">Payment Confirmed</span>
+                                    <span class="text-muted">@Model.DateAdded.AddMinutes(5).ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <p class="text-muted mb-0">Payment of $@Model.GrandTotal.ToString("F2") was received via @Model.PaymentMethod.</p>
+                            </div>
+                        </div>
+
+                        @if (Model.Status == "Processing" || Model.Status == "Delivering" || Model.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-indicator bg-info">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-medium">Processing Started</span>
+                                        <span class="text-muted">@Model.DateAdded.AddHours(1).ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <p class="text-muted mb-0">Order is being processed for shipping.</p>
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.Status == "Delivering" || Model.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-indicator bg-warning">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-medium">Shipped</span>
+                                        <span class="text-muted">@Model.DateAdded.AddDays(1).ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <p class="text-muted mb-0">Order has been shipped via @Model.ShippingMethod. Tracking #: @Model.ShippingTrackingNumber</p>
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-indicator bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-medium">Delivered</span>
+                                        <span class="text-muted">@Model.DateModified?.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <p class="text-muted mb-0">Order has been delivered to the customer.</p>
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.Status == "Failed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-indicator bg-danger">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-medium">Failed</span>
+                                        <span class="text-muted">@Model.DateModified?.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <p class="text-muted mb-0">Order processing failed.</p>
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.Status == "Cancelled")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-indicator bg-danger">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-medium">Cancelled</span>
+                                        <span class="text-muted">@Model.DateModified?.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <p class="text-muted mb-0">Order was cancelled.</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes Tab -->
+        <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note me-2"></i> Order Notes</h5>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addNoteModal">
+                        <i class="fas fa-plus me-1"></i> Add Note
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No notes have been added to this order yet.
+                    </div>
+
+                    <!-- This would show if there were notes -->
+                    <!--
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>Customer requested expedited shipping</strong>
+                                <small class="text-muted">01/05/2023 10:15</small>
+                            </div>
+                            <p class="mb-1 text-muted">Customer called to request faster shipping. Upgraded from Standard to Express.</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Added by: Admin</small>
+                                <div>
+                                    <button class="btn btn-sm btn-link p-0 text-primary">Edit</button>
+                                    <button class="btn btn-sm btn-link p-0 text-danger ms-2">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelOrderModalLabel">Cancel Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Are you sure you want to cancel this order?
+                </div>
+                <p>This action cannot be undone. The customer will be notified of the cancellation.</p>
+                <div class="mb-3">
+                    <label for="cancelReason" class="form-label">Reason for Cancellation:</label>
+                    <select class="form-select" id="cancelReason">
+                        <option value="">Please select a reason...</option>
+                        <option value="customer_request">Customer Requested</option>
+                        <option value="out_of_stock">Items Out of Stock</option>
+                        <option value="payment_failed">Payment Failed</option>
+                        <option value="shipping_address">Invalid Shipping Address</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="cancelNotes" class="form-label">Additional Notes:</label>
+                    <textarea class="form-control" id="cancelNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger">Confirm Cancellation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addNoteModalLabel">Add Order Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="noteTitle" class="form-label">Title:</label>
+                    <input type="text" class="form-control" id="noteTitle" placeholder="Enter a title for the note">
+                </div>
+                <div class="mb-3">
+                    <label for="noteContent" class="form-label">Note:</label>
+                    <textarea class="form-control" id="noteContent" rows="4" placeholder="Enter note details..."></textarea>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="notifyCustomer">
+                    <label class="form-check-label" for="notifyCustomer">
+                        Send notification to customer
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Add Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "bg-success",
+            "processing" => "bg-primary",
+            "delivering" => "bg-info",
+            "failed" => "bg-danger",
+            "cancelled" => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    public string GetStatusAlertClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "alert-success",
+            "processing" => "alert-primary",
+            "delivering" => "alert-info",
+            "failed" => "alert-danger",
+            "cancelled" => "alert-warning",
+            _ => "alert-secondary"
+        };
+    }
+
+    public string GetStatusIcon(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "fas fa-check-circle",
+            "processing" => "fas fa-cog fa-spin",
+            "delivering" => "fas fa-truck",
+            "failed" => "fas fa-times-circle",
+            "cancelled" => "fas fa-ban",
+            _ => "fas fa-question-circle"
+        };
+    }
+
+    public string GetStatusMessage(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "This order has been successfully delivered to the customer.",
+            "processing" => "This order is currently being processed and prepared for shipping.",
+            "delivering" => "This order is on its way to the customer.",
+            "failed" => "There was a problem processing this order. Check the history for details.",
+            "cancelled" => "This order has been cancelled.",
+            _ => "The status of this order is unknown."
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            // Handle tab switching from URL hash
+            const hash = window.location.hash;
+            if (hash === '#history') {
+                const historyTab = document.querySelector('#history-tab');
+                if (historyTab) {
+                    const tab = new bootstrap.Tab(historyTab);
+                    tab.show();
+                }
+            } else if (hash === '#notes') {
+                const notesTab = document.querySelector('#notes-tab');
+                if (notesTab) {
+                    const tab = new bootstrap.Tab(notesTab);
+                    tab.show();
+                }
+            }
+
+            // Update URL hash on tab change
+            $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+                const id = $(e.target).attr('id');
+                if (id === 'summary-tab') {
+                    history.replaceState(null, null, ' ');
+                } else if (id === 'history-tab') {
+                    history.replaceState(null, null, '#history');
+                } else if (id === 'notes-tab') {
+                    history.replaceState(null, null, '#notes');
+                }
+            });
+        });
+    </script>
+}

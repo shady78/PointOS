@@ -1,0 +1,705 @@
+﻿@model PointOS.ViewModels.OrderViewModel
+@{
+    ViewData["Title"] = "Create Order";
+}
+
+<div class="container-fluid p-0">
+    <!-- Header with breadcrumb and actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Add Order</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+                    <li class="breadcrumb-item"><a href="#">eCommerce</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Order")">Sales</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Add Order</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <button type="button" class="btn btn-light me-2" id="btnFilter">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+            <button type="submit" form="orderForm" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Create
+            </button>
+        </div>
+    </div>
+
+    <form id="orderForm" asp-action="Create" asp-controller="Order" method="post">
+        <div class="row">
+            <!-- Order Details Section -->
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Order Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="OrderNumber" class="form-label">Order ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text">#</span>
+                                <input asp-for="OrderNumber" class="form-control" readonly value="@ViewBag.NextOrderNumber" />
+                            </div>
+                            <span asp-validation-for="OrderNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PaymentMethod" class="form-label required">Payment Method</label>
+                            <select asp-for="PaymentMethod" class="form-select">
+                                <option value="">Select an option</option>
+                                <option value="Credit Card (Visa)">Credit Card (Visa)</option>
+                                <option value="Credit Card (Mastercard)">Credit Card (Mastercard)</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cash on Delivery">Cash on Delivery</option>
+                            </select>
+                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                            <small class="form-text text-muted">Set the payment method for this order.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ShippingMethod" class="form-label required">Shipping Method</label>
+                            <select asp-for="ShippingMethod" class="form-select">
+                                <option value="">Select an option</option>
+                                <option value="Standard Rate">Standard Rate</option>
+                                <option value="Express Delivery">Express Delivery</option>
+                                <option value="Next Day Delivery">Next Day Delivery</option>
+                                <option value="In-Store Pickup">In-Store Pickup</option>
+                            </select>
+                            <span asp-validation-for="ShippingMethod" class="text-danger"></span>
+                            <small class="form-text text-muted">Set the shipping method for this order.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DateAdded" class="form-label required">Order Date</label>
+                            <input asp-for="DateAdded" type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="DateAdded" class="text-danger"></span>
+                            <small class="form-text text-muted">Set the date of the order.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Status" class="form-label required">Status</label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Processing">Processing</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Delivering">Delivering</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Failed">Failed</option>
+                            </select>
+                            <span asp-validation-for="Status" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Select Products Section -->
+            <div class="col-md-8 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Select Products</h5>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                            <i class="fas fa-plus me-1"></i> Add Products
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="selectedProductsContainer">
+                            <p class="text-muted" id="noProductsMessage">Add products to this order.</p>
+                            <div id="selectedProductsList" class="row g-3">
+                                <!-- Selected products will be dynamically added here -->
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <div class="bg-light p-3 rounded" style="min-width: 250px;">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Subtotal:</span>
+                                    <span id="subtotalValue">$0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>VAT (<span id="vatRate">5</span>%):</span>
+                                    <span id="vatValue">$0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Shipping:</span>
+                                    <span id="shippingValue">$0.00</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between fw-bold">
+                                    <span>Total Cost:</span>
+                                    <span id="totalCostValue" class="fs-5">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billing & Shipping Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">Delivery Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Billing Address -->
+                    <div class="col-md-6 mb-4">
+                        <h6 class="mb-3">Billing Address</h6>
+                        <div class="mb-3">
+                            <label asp-for="BillingAddress" class="form-label required">Address Line 1</label>
+                            <input asp-for="BillingAddress" class="form-control" />
+                            <span asp-validation-for="BillingAddress" class="text-danger"></span>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label asp-for="BillingCity" class="form-label">City</label>
+                                <input asp-for="BillingCity" class="form-control" />
+                                <span asp-validation-for="BillingCity" class="text-danger"></span>
+                            </div>
+                            <div class="col">
+                                <label asp-for="BillingPostalCode" class="form-label required">Postcode</label>
+                                <input asp-for="BillingPostalCode" class="form-control" />
+                                <span asp-validation-for="BillingPostalCode" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label asp-for="BillingState" class="form-label required">State</label>
+                                <input asp-for="BillingState" class="form-control" />
+                                <span asp-validation-for="BillingState" class="text-danger"></span>
+                            </div>
+                            <div class="col">
+                                <label asp-for="BillingCountry" class="form-label required">Country</label>
+                                <select asp-for="BillingCountry" class="form-select">
+                                    <option value="">Select a country</option>
+                                    <option value="Australia">Australia</option>
+                                    <option value="United States">United States</option>
+                                    <option value="United Kingdom">United Kingdom</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="New Zealand">New Zealand</option>
+                                    <!-- Add more countries as needed -->
+                                </select>
+                                <span asp-validation-for="BillingCountry" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shipping Address -->
+                    <div class="col-md-6 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Shipping Address</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sameAsBilling">
+                                <label class="form-check-label" for="sameAsBilling">
+                                    Shipping address is the same as billing address
+                                </label>
+                            </div>
+                        </div>
+                        <div id="shippingAddressFields">
+                            <div class="mb-3">
+                                <label asp-for="ShippingAddress" class="form-label">Address Line 1</label>
+                                <input asp-for="ShippingAddress" class="form-control" />
+                                <span asp-validation-for="ShippingAddress" class="text-danger"></span>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label asp-for="ShippingCity" class="form-label">City</label>
+                                    <input asp-for="ShippingCity" class="form-control" />
+                                    <span asp-validation-for="ShippingCity" class="text-danger"></span>
+                                </div>
+                                <div class="col">
+                                    <label asp-for="ShippingPostalCode" class="form-label">Postcode</label>
+                                    <input asp-for="ShippingPostalCode" class="form-control" />
+                                    <span asp-validation-for="ShippingPostalCode" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label asp-for="ShippingState" class="form-label">State</label>
+                                    <input asp-for="ShippingState" class="form-control" />
+                                    <span asp-validation-for="ShippingState" class="text-danger"></span>
+                                </div>
+                                <div class="col">
+                                    <label asp-for="ShippingCountry" class="form-label">Country</label>
+                                    <select asp-for="ShippingCountry" class="form-select">
+                                        <option value="">Select a country</option>
+                                        <option value="Australia">Australia</option>
+                                        <option value="United States">United States</option>
+                                        <option value="United Kingdom">United Kingdom</option>
+                                        <option value="Canada">Canada</option>
+                                        <option value="New Zealand">New Zealand</option>
+                                        <!-- Add more countries as needed -->
+                                    </select>
+                                    <span asp-validation-for="ShippingCountry" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Information -->
+                <h6 class="mb-3">Customer Information</h6>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="CustomerName" class="form-label required">Customer Name</label>
+                            <input asp-for="CustomerName" class="form-control" />
+                            <span asp-validation-for="CustomerName" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="CustomerEmail" class="form-label required">Customer Email</label>
+                            <input asp-for="CustomerEmail" type="email" class="form-control" />
+                            <span asp-validation-for="CustomerEmail" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="CustomerPhone" class="form-label">Customer Phone</label>
+                            <input asp-for="CustomerPhone" class="form-control" />
+                            <span asp-validation-for="CustomerPhone" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="RewardPoints" class="form-label">Reward Points</label>
+                            <input asp-for="RewardPoints" type="number" class="form-control" value="0" />
+                            <span asp-validation-for="RewardPoints" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden fields for product data -->
+        <div id="orderItemsContainer">
+            <!-- Order items will be added here as hidden inputs -->
+        </div>
+
+        <input type="hidden" asp-for="Total" id="hiddenSubtotal" value="0" />
+        <input type="hidden" asp-for="VAT" id="hiddenVAT" value="5" />
+        <input type="hidden" asp-for="ShippingRate" id="hiddenShippingRate" value="0" />
+        <input type="hidden" asp-for="GrandTotal" id="hiddenGrandTotal" value="0" />
+
+        <!-- Action buttons -->
+        <div class="d-flex justify-content-between mb-4">
+            <a href="@Url.Action("Index", "Order")" class="btn btn-light">
+                <i class="fas fa-times me-1"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addProductModalLabel">Add Products to Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchProducts" class="form-control" placeholder="Search Products">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th width="50px"></th>
+                                <th width="80px">Image</th>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Price</th>
+                                <th>QTY Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- This will be populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addSelectedProducts">Add Selected Products</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+
+        .product-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+            .product-card:hover {
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            }
+
+            .product-card .btn-remove {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background-color: white;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .product-card:hover .btn-remove {
+                opacity: 1;
+            }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Products data (this would typically come from your backend)
+        const availableProducts = [
+            {
+                id: 1,
+                name: "Product 1",
+                price: 300.00,
+                sku: "03197005",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 44
+            },
+            {
+                id: 2,
+                name: "Product 2",
+                price: 174.00,
+                sku: "02284001",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 33
+            },
+            {
+                id: 3,
+                name: "Product 3",
+                price: 237.00,
+                sku: "04153004",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 15
+            },
+            {
+                id: 4,
+                name: "Product 4",
+                price: 125.00,
+                sku: "02154007",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 28
+            },
+            {
+                id: 5,
+                name: "Product 5",
+                price: 195.00,
+                sku: "02858005",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 41
+            },
+            {
+                id: 6,
+                name: "Product 6",
+                price: 230.00,
+                sku: "02690008",
+                imageUrl: "/api/placeholder/70/70",
+                stock: 29
+            }
+        ];
+
+        // Selected products array
+        let selectedProducts = [];
+
+        $(document).ready(function() {
+            // Populate products table
+            populateProductsTable(availableProducts);
+
+            // Handle search products
+            $('#searchProducts').on('input', function() {
+                const searchTerm = $(this).val().toLowerCase();
+                const filteredProducts = availableProducts.filter(p =>
+                    p.name.toLowerCase().includes(searchTerm) ||
+                    p.sku.toLowerCase().includes(searchTerm)
+                );
+                populateProductsTable(filteredProducts);
+            });
+
+            // Handle add selected products button
+            $('#addSelectedProducts').click(function() {
+                const checkedRows = $('#productsTable tbody input[type="checkbox"]:checked');
+
+                checkedRows.each(function() {
+                    const productId = $(this).val();
+                    const product = availableProducts.find(p => p.id == productId);
+
+                    // Check if product is already selected
+                    if (!selectedProducts.some(p => p.id == productId)) {
+                        selectedProducts.push({
+                            ...product,
+                            quantity: 1
+                        });
+                    }
+                });
+
+                updateSelectedProductsList();
+                $('#addProductModal').modal('hide');
+            });
+
+            // Handle "Same as Billing" checkbox
+            $('#sameAsBilling').change(function() {
+                if ($(this).is(':checked')) {
+                    // Copy billing address to shipping address
+                    $('#ShippingAddress').val($('#BillingAddress').val());
+                    $('#ShippingCity').val($('#BillingCity').val());
+                    $('#ShippingPostalCode').val($('#BillingPostalCode').val());
+                    $('#ShippingState').val($('#BillingState').val());
+                    $('#ShippingCountry').val($('#BillingCountry').val());
+
+                    // Disable shipping fields
+                    $('#shippingAddressFields input, #shippingAddressFields select').prop('disabled', true);
+                } else {
+                    // Enable shipping fields
+                    $('#shippingAddressFields input, #shippingAddressFields select').prop('disabled', false);
+                }
+            });
+
+            // Update shipping rate based on shipping method
+            $('#ShippingMethod').change(function() {
+                const method = $(this).val();
+                let rate = 0;
+
+                switch (method) {
+                    case 'Standard Rate':
+                        rate = 10.00;
+                        break;
+                    case 'Express Delivery':
+                        rate = 25.00;
+                        break;
+                    case 'Next Day Delivery':
+                        rate = 35.00;
+                        break;
+                    case 'In-Store Pickup':
+                        rate = 0;
+                        break;
+                    default:
+                        rate = 0;
+                }
+
+                $('#hiddenShippingRate').val(rate);
+                updateOrderTotals();
+            });
+        });
+
+        // Function to populate products table
+        function populateProductsTable(products) {
+            const tbody = $('#productsTable tbody');
+            tbody.empty();
+
+            if (products.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="6" class="text-center py-3">No products found</td>
+                    </tr>
+                `);
+                return;
+            }
+
+            products.forEach(product => {
+                const isSelected = selectedProducts.some(p => p.id == product.id);
+
+                tbody.append(`
+                    <tr>
+                        <td class="text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="${product.id}" ${isSelected ? 'checked disabled' : ''}>
+                            </div>
+                        </td>
+                        <td>
+                            <img src="${product.imageUrl}" alt="${product.name}" width="50" height="50" class="rounded border">
+                        </td>
+                        <td>${product.name}</td>
+                        <td>${product.sku}</td>
+                        <td>$${product.price.toFixed(2)}</td>
+                        <td>${product.stock} ${product.stock <= 10 ? '<span class="badge bg-warning">Low stock</span>' : ''}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        // Function to update selected products list
+        function updateSelectedProductsList() {
+            const container = $('#selectedProductsList');
+            const noProductsMessage = $('#noProductsMessage');
+
+            container.empty();
+
+            if (selectedProducts.length === 0) {
+                noProductsMessage.show();
+                return;
+            }
+
+            noProductsMessage.hide();
+
+            selectedProducts.forEach((product, index) => {
+                container.append(`
+                    <div class="col-md-6">
+                        <div class="card product-card position-relative">
+                            <button type="button" class="btn btn-sm btn-remove text-danger"
+                                    onclick="removeProduct(${index})" aria-label="Remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <img src="${product.imageUrl}" alt="${product.name}"
+                                             class="rounded border" width="60" height="60">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1">${product.name}</h6>
+                                        <p class="card-text text-muted small mb-2">SKU: ${product.sku}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-medium">$${product.price.toFixed(2)}</span>
+                                            <div class="input-group input-group-sm" style="width: 100px;">
+                                                <button class="btn btn-outline-secondary" type="button"
+                                                        onclick="decreaseQuantity(${index})">-</button>
+                                                <input type="number" class="form-control text-center"
+                                                       min="1" max="${product.stock}" value="${product.quantity}"
+                                                       onchange="updateQuantity(${index}, this.value)">
+                                                <button class="btn btn-outline-secondary" type="button"
+                                                        onclick="increaseQuantity(${index})">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            // Update order item hidden fields
+            updateOrderItemsFields();
+
+            // Update order totals
+            updateOrderTotals();
+        }
+
+        // Function to remove a product
+        function removeProduct(index) {
+            selectedProducts.splice(index, 1);
+            updateSelectedProductsList();
+        }
+
+        // Function to increase quantity
+        function increaseQuantity(index) {
+            const product = selectedProducts[index];
+            if (product.quantity < product.stock) {
+                product.quantity++;
+                updateSelectedProductsList();
+            }
+        }
+
+        // Function to decrease quantity
+        function decreaseQuantity(index) {
+            const product = selectedProducts[index];
+            if (product.quantity > 1) {
+                product.quantity--;
+                updateSelectedProductsList();
+            }
+        }
+
+        // Function to update quantity
+        function updateQuantity(index, value) {
+            const product = selectedProducts[index];
+            const qty = parseInt(value);
+
+            if (isNaN(qty) || qty < 1) {
+                product.quantity = 1;
+            } else if (qty > product.stock) {
+                product.quantity = product.stock;
+            } else {
+                product.quantity = qty;
+            }
+
+            updateSelectedProductsList();
+        }
+
+        // Function to update hidden fields for order items
+        function updateOrderItemsFields() {
+            const container = $('#orderItemsContainer');
+            container.empty();
+
+            selectedProducts.forEach((product, index) => {
+                container.append(`
+                    <input type="hidden" name="OrderItems[${index}].ProductId" value="${product.id}">
+                    <input type="hidden" name="OrderItems[${index}].ProductName" value="${product.name}">
+                    <input type="hidden" name="OrderItems[${index}].SKU" value="${product.sku}">
+                    <input type="hidden" name="OrderItems[${index}].ProductImageUrl" value="${product.imageUrl}">
+                    <input type="hidden" name="OrderItems[${index}].Quantity" value="${product.quantity}">
+                    <input type="hidden" name="OrderItems[${index}].UnitPrice" value="${product.price}">
+                    <input type="hidden" name="OrderItems[${index}].Discount" value="0">
+                    <input type="hidden" name="OrderItems[${index}].DeliveryDate" value="${new Date().toISOString().split('T')[0]}">
+                `);
+            });
+        }
+
+        // Function to update order totals
+        function updateOrderTotals() {
+            // Calculate subtotal
+            const subtotal = selectedProducts.reduce((total, product) => {
+                return total + (product.price * product.quantity);
+            }, 0);
+
+            // Get VAT rate and shipping rate
+            const vatRate = parseFloat($('#hiddenVAT').val());
+            const shippingRate = parseFloat($('#hiddenShippingRate').val());
+
+            // Calculate VAT amount
+            const vatAmount = subtotal * (vatRate / 100);
+
+            // Calculate grand total
+            const grandTotal = subtotal + vatAmount + shippingRate;
+
+            // Update UI
+            $('#subtotalValue').text(`$${subtotal.toFixed(2)}`);
+            $('#vatRate').text(vatRate);
+            $('#vatValue').text(`$${vatAmount.toFixed(2)}`);
+            $('#shippingValue').text(`$${shippingRate.toFixed(2)}`);
+            $('#totalCostValue').text(`$${grandTotal.toFixed(2)}`);
+
+            // Update hidden fields
+            $('#hiddenSubtotal').val(subtotal);
+            $('#hiddenGrandTotal').val(grandTotal);
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
