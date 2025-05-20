@@ -90,7 +90,7 @@
 
                         <div class="mb-3">
                             <label asp-for="DateAdded" class="form-label required">Order Date</label>
-                            <input asp-for="DateAdded" type="date" class="form-control" />
+                            <input asp-for="DateAdded" type="date" class="form-control" value="@Model.DateAdded.ToString("yyyy-MM-dd")" />
                             <span asp-validation-for="DateAdded" class="text-danger"></span>
                         </div>
 
@@ -127,7 +127,7 @@
                     </div>
                     <div class="card-body">
                         <div id="selectedProductsContainer">
-                            <div id="selectedProductsList" class="table-responsive">
+                            <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
@@ -145,11 +145,11 @@
                                             @for (int i = 0; i < Model.OrderItems.Count; i++)
                                             {
                                                 var item = Model.OrderItems[i];
-                                                <tr data-item-id="@item.Id">
+                                                <tr data-product-id="@item.ProductId" data-item-id="@item.Id">
                                                     <td>
                                                         <div class="d-flex align-items-center">
-                                                            <img src="@(string.IsNullOrEmpty(item.ProductImageUrl) ? "/api/placeholder/50/50" : item.ProductImageUrl)"
-                                                                 alt="@item.ProductName" width="40" height="40" class="rounded border me-2">
+                                                            <img src="@(string.IsNullOrEmpty(item.ProductImageUrl) ? "/media/products/default.png" : item.ProductImageUrl)"
+                                                                 alt="@item.ProductName" width="40" height="40" class="rounded border me-2 object-fit-cover">
                                                             <span>@item.ProductName</span>
                                                         </div>
                                                         <input type="hidden" name="OrderItems[@i].Id" value="@item.Id" />
@@ -166,7 +166,7 @@
                                                             <span class="input-group-text">$</span>
                                                             <input type="number" class="form-control item-price"
                                                                    name="OrderItems[@i].UnitPrice" value="@item.UnitPrice.ToString("F2")"
-                                                                   min="0" step="0.01" onchange="updateItemSubtotal(this)" />
+                                                                   min="0" step="0.01" />
                                                         </div>
                                                     </td>
                                                     <td>
@@ -174,7 +174,7 @@
                                                             <button class="btn btn-outline-secondary btn-decrease-qty" type="button">-</button>
                                                             <input type="number" class="form-control text-center item-quantity"
                                                                    name="OrderItems[@i].Quantity" value="@item.Quantity"
-                                                                   min="1" onchange="updateItemSubtotal(this)" />
+                                                                   min="1" />
                                                             <button class="btn btn-outline-secondary btn-increase-qty" type="button">+</button>
                                                         </div>
                                                     </td>
@@ -215,7 +215,7 @@
                                         <span>VAT (</span>
                                         <input type="number" id="vatRateInput" class="form-control form-control-sm mx-1"
                                                style="width: 60px;" min="0" max="100" step="0.1"
-                                               value="@Model.VAT.ToString("F1")" onchange="updateOrderTotals()">
+                                               value="@Model.VAT.ToString("F1")" />
                                         <span>%):</span>
                                     </div>
                                     <span id="vatValue">$@((Model.Total * Model.VAT / 100).ToString("F2"))</span>
@@ -225,8 +225,7 @@
                                     <div class="input-group input-group-sm" style="width: 100px;">
                                         <span class="input-group-text">$</span>
                                         <input type="number" id="shippingRateInput" class="form-control"
-                                               min="0" step="0.01" value="@Model.ShippingRate.ToString("F2")"
-                                               onchange="updateOrderTotals()">
+                                               min="0" step="0.01" value="@Model.ShippingRate.ToString("F2")" />
                                     </div>
                                 </div>
                                 <hr>
@@ -494,348 +493,15 @@
                 align-items: center;
                 justify-content: center;
             }
+
+        .object-fit-cover {
+            object-fit: cover;
+        }
     </style>
 }
 
 @section Scripts {
-    <script>
-        // Products data (this would typically come from your backend)
-        const availableProducts = [
-            {
-                id: 1,
-                name: "Product 1",
-                price: 300.00,
-                sku: "03197005",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 44
-            },
-            {
-                id: 2,
-                name: "Product 2",
-                price: 174.00,
-                sku: "02284001",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 33
-            },
-            {
-                id: 3,
-                name: "Product 3",
-                price: 237.00,
-                sku: "04153004",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 15
-            },
-            {
-                id: 4,
-                name: "Product 4",
-                price: 125.00,
-                sku: "02154007",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 28
-            },
-            {
-                id: 5,
-                name: "Product 5",
-                price: 195.00,
-                sku: "02858005",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 41
-            },
-            {
-                id: 6,
-                name: "Product 6",
-                price: 230.00,
-                sku: "02690008",
-                imageUrl: "/api/placeholder/70/70",
-                stock: 29
-            }
-        ];
-
-        $(document).ready(function() {
-            // Populate products table
-            populateProductsTable(availableProducts);
-
-            // Set initial values for calculations
-            updateOrderTotals();
-
-            // Handle search products
-            $('#searchProducts').on('input', function() {
-                const searchTerm = $(this).val().toLowerCase();
-                const filteredProducts = availableProducts.filter(p =>
-                    p.name.toLowerCase().includes(searchTerm) ||
-                    p.sku.toLowerCase().includes(searchTerm)
-                );
-                populateProductsTable(filteredProducts);
-            });
-
-            // Handle add selected products button
-            $('#addSelectedProducts').click(function() {
-                const checkedRows = $('#productsTable tbody input[type="checkbox"]:checked');
-                let newRowsAdded = false;
-
-                checkedRows.each(function() {
-                    const productId = $(this).val();
-                    const product = availableProducts.find(p => p.id == productId);
-
-                    // Add product to order items
-                    addProductToOrderItems(product);
-                    newRowsAdded = true;
-                });
-
-                if (newRowsAdded) {
-                    // Remove "no items" row if it exists
-                    $('#noItemsRow').remove();
-
-                    // Update order totals
-                    updateOrderTotals();
-                }
-
-                $('#addProductModal').modal('hide');
-            });
-
-            // Handle "Same as Billing" checkbox
-            $('#sameAsBilling').change(function() {
-                if ($(this).is(':checked')) {
-                    // Copy billing address to shipping address
-                    $('#ShippingAddress').val($('#BillingAddress').val());
-                    $('#ShippingCity').val($('#BillingCity').val());
-                    $('#ShippingPostalCode').val($('#BillingPostalCode').val());
-                    $('#ShippingState').val($('#BillingState').val());
-                    $('#ShippingCountry').val($('#BillingCountry').val());
-
-                    // Disable shipping fields
-                    $('#shippingAddressFields input, #shippingAddressFields select').prop('disabled', true);
-                } else {
-                    // Enable shipping fields
-                    $('#shippingAddressFields input, #shippingAddressFields select').prop('disabled', false);
-                }
-            });
-
-            // Trigger the change event to set the initial state
-            $('#sameAsBilling').trigger('change');
-
-            // Handle increasing quantity buttons
-            $(document).on('click', '.btn-increase-qty', function() {
-                const input = $(this).siblings('input.item-quantity');
-                const currentValue = parseInt(input.val()) || 1;
-                input.val(currentValue + 1);
-                input.trigger('change');
-            });
-
-            // Handle decreasing quantity buttons
-            $(document).on('click', '.btn-decrease-qty', function() {
-                const input = $(this).siblings('input.item-quantity');
-                const currentValue = parseInt(input.val()) || 2;
-                if (currentValue > 1) {
-                    input.val(currentValue - 1);
-                    input.trigger('change');
-                }
-            });
-
-            // Handle removing order items
-            $(document).on('click', '.btn-remove-item', function() {
-                const row = $(this).closest('tr');
-
-                // Remove the row
-                row.remove();
-
-                // If no rows left, add "no items" row
-                if ($('#orderItemsTableBody tr').length === 0) {
-                    $('#orderItemsTableBody').append(`
-                        <tr id="noItemsRow">
-                            <td colspan="6" class="text-center py-3">
-                                <p class="text-muted mb-0">No products added to this order</p>
-                            </td>
-                        </tr>
-                    `);
-                }
-
-                // Update order totals
-                updateOrderTotals();
-            });
-
-            // Update shipping rate based on shipping method
-            $('#ShippingMethod').change(function() {
-                const method = $(this).val();
-                let rate = 0;
-
-                switch (method) {
-                    case 'Standard Rate':
-                        rate = 10.00;
-                        break;
-                    case 'Express Delivery':
-                        rate = 25.00;
-                        break;
-                    case 'Next Day Delivery':
-                        rate = 35.00;
-                        break;
-                    case 'In-Store Pickup':
-                        rate = 0;
-                        break;
-                    default:
-                        rate = 0;
-                }
-
-                $('#shippingRateInput').val(rate.toFixed(2));
-                updateOrderTotals();
-            });
-        });
-
-        // Function to populate products table
-        function populateProductsTable(products) {
-            const tbody = $('#productsTable tbody');
-            tbody.empty();
-
-            if (products.length === 0) {
-                tbody.append(`
-                    <tr>
-                        <td colspan="6" class="text-center py-3">No products found</td>
-                    </tr>
-                `);
-                return;
-            }
-
-            // Get current product IDs in the order
-            const currentProductIds = [];
-            $('#orderItemsTableBody tr').each(function() {
-                const inputs = $(this).find('input[name$=".ProductId"]');
-                if (inputs.length > 0) {
-                    currentProductIds.push(parseInt(inputs.val()));
-                }
-            });
-
-            products.forEach(product => {
-                const isInOrder = currentProductIds.includes(product.id);
-
-                tbody.append(`
-                    <tr>
-                        <td class="text-center">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="${product.id}" ${isInOrder ? 'checked disabled' : ''}>
-                            </div>
-                        </td>
-                        <td>
-                            <img src="${product.imageUrl}" alt="${product.name}" width="50" height="50" class="rounded border">
-                        </td>
-                        <td>${product.name}</td>
-                        <td>${product.sku}</td>
-                        <td>${product.price.toFixed(2)}</td>
-                        <td>${product.stock} ${product.stock <= 10 ? '<span class="badge bg-warning">Low stock</span>' : ''}</td>
-                    </tr>
-                `);
-            });
-        }
-
-        // Function to add a product to order items
-        function addProductToOrderItems(product) {
-            // Get current row count for proper indexing
-            const rowCount = $('#orderItemsTableBody tr').not('#noItemsRow').length;
-
-            // Create new row with the product
-            const newRow = `
-                <tr data-item-id="new-${rowCount}">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <img src="${product.imageUrl}" alt="${product.name}" width="40" height="40" class="rounded border me-2">
-                            <span>${product.name}</span>
-                        </div>
-                        <input type="hidden" name="OrderItems[${rowCount}].Id" value="0" />
-                        <input type="hidden" name="OrderItems[${rowCount}].ProductId" value="${product.id}" />
-                        <input type="hidden" name="OrderItems[${rowCount}].ProductName" value="${product.name}" />
-                        <input type="hidden" name="OrderItems[${rowCount}].ProductImageUrl" value="${product.imageUrl}" />
-                    </td>
-                    <td>
-                        ${product.sku}
-                        <input type="hidden" name="OrderItems[${rowCount}].SKU" value="${product.sku}" />
-                    </td>
-                    <td>
-                        <div class="input-group input-group-sm" style="width: 120px;">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control item-price"
-                                  name="OrderItems[${rowCount}].UnitPrice" value="${product.price.toFixed(2)}"
-                                  min="0" step="0.01" onchange="updateItemSubtotal(this)" />
-                        </div>
-                    </td>
-                    <td>
-                        <div class="input-group input-group-sm">
-                            <button class="btn btn-outline-secondary btn-decrease-qty" type="button">-</button>
-                            <input type="number" class="form-control text-center item-quantity"
-                                  name="OrderItems[${rowCount}].Quantity" value="1"
-                                  min="1" max="${product.stock}" onchange="updateItemSubtotal(this)" />
-                            <button class="btn btn-outline-secondary btn-increase-qty" type="button">+</button>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="item-subtotal">${product.price.toFixed(2)}</span>
-                        <input type="hidden" name="OrderItems[${rowCount}].Discount" value="0" />
-                        <input type="hidden" name="OrderItems[${rowCount}].DeliveryDate" value="${new Date().toISOString().split('T')[0]}" />
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-
-            // Append the new row to the table
-            $('#orderItemsTableBody').append(newRow);
-        }
-
-        // Function to update item subtotal
-        function updateItemSubtotal(element) {
-            const row = $(element).closest('tr');
-            const priceInput = row.find('.item-price');
-            const quantityInput = row.find('.item-quantity');
-
-            const price = parseFloat(priceInput.val()) || 0;
-            const quantity = parseInt(quantityInput.val()) || 1;
-
-            const subtotal = price * quantity;
-            row.find('.item-subtotal').text(' + subtotal.toFixed(2));
-
-            // Update overall order totals
-            updateOrderTotals();
-        }
-
-        // Function to update order totals
-        function updateOrderTotals() {
-            // Calculate subtotal from all order items
-            let subtotal = 0;
-            $('#orderItemsTableBody tr').not('#noItemsRow').each(function() {
-                const priceEl = $(this).find('.item-price');
-                const quantityEl = $(this).find('.item-quantity');
-
-                if (priceEl.length && quantityEl.length) {
-                    const price = parseFloat(priceEl.val()) || 0;
-                    const quantity = parseInt(quantityEl.val()) || 1;
-                    subtotal += price * quantity;
-                }
-            });
-
-            // Get VAT rate and shipping rate
-            const vatRate = parseFloat($('#vatRateInput').val()) || 0;
-            const shippingRate = parseFloat($('#shippingRateInput').val()) || 0;
-
-            // Calculate VAT amount
-            const vatAmount = subtotal * (vatRate / 100);
-
-            // Calculate grand total
-            const grandTotal = subtotal + vatAmount + shippingRate;
-
-            // Update UI
-            $('#subtotalValue').text(' + subtotal.toFixed(2));
-            $('#vatValue').text(' + vatAmount.toFixed(2));
-            $('#totalCostValue').text(' + grandTotal.toFixed(2));
-
-            // Update hidden fields
-            $('#hiddenSubtotal').val(subtotal);
-            $('#hiddenVAT').val(vatRate);
-            $('#hiddenShippingRate').val(shippingRate);
-            $('#hiddenGrandTotal').val(grandTotal);
-        }
-    </script>
-
+    <script src="~/js/OrderProducts.js"></script>
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
